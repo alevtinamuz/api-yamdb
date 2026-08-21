@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import User
 
 
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
     list_display = (
         'username',
@@ -21,6 +22,3 @@ class CustomUserAdmin(UserAdmin):
     list_filter = (
         'role',
     )
-
-
-admin.site.register(User, CustomUserAdmin)

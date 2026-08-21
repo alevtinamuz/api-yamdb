@@ -4,7 +4,7 @@ from django.db import models
 from django.utils import timezone
 
 from .constants import (
-    ROLE_MAX_LENGTH, USERNAME_MAX_LENGTH, EMAIL_MAX_LENGTH,
+    ROLE_MAX_LENGTH, EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH, SLUG_MAX_LENGTH
 )
 
@@ -23,11 +23,6 @@ class User(AbstractUser):
     bio = models.TextField(
         'Биография', blank=True
     )
-    username = models.CharField(
-        'Username пользователя',
-        max_length=USERNAME_MAX_LENGTH,
-        unique=True
-    )
     email = models.EmailField(
         'Email', max_length=EMAIL_MAX_LENGTH,
         unique=True
@@ -43,11 +38,15 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == 'admin'
+        return (
+            self.role == self.RoleChoices.ADMIN
+            or self.is_superuser
+            or self.is_staff
+        )
 
     @property
     def is_moderator(self):
-        return self.role == 'moderator'
+        return self.role == self.RoleChoices.MODERATOR
 
 
 class Genre(models.Model):
