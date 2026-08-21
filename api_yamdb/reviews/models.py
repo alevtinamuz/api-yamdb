@@ -155,7 +155,7 @@ class Review(models.Model):
         verbose_name_plural = 'Отзывы'
 
     def __str__(self):
-        return f'{self.author}: {self.title} - {self.score}'
+        return f'Отзыв {self.author} к {self.title}, оценка {self.score}'
 
 
 class Comment(models.Model):
