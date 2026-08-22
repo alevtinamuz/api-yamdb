@@ -139,6 +139,7 @@ class ReviewViewSet(NestedModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = (IsAdminOrModeratorOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     parent_model = Title
     parent_field = 'title'
@@ -149,6 +150,7 @@ class CommentViewSet(NestedModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = (IsAdminOrModeratorOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     parent_model = Review
     parent_field = 'review'

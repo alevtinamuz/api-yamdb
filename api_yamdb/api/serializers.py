@@ -77,6 +77,9 @@ class NestedCreateMixin:
                 raise serializers.ValidationError(
                     'Вы уже оставили отзыв на это произведение')
 
+        validated_data.pop('author', None)
+        validated_data.pop(self.parent_field, None)
+
         return self.Meta.model.objects.create(
             **{self.parent_field: parent_obj},
             author=author,
