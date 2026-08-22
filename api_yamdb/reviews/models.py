@@ -1,11 +1,12 @@
-from django.core.validators import MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
 from .constants import (
     ROLE_MAX_LENGTH, USERNAME_MAX_LENGTH, EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH, SLUG_MAX_LENGTH
+    NAME_MAX_LENGTH, SLUG_MAX_LENGTH, MIN_SCORE, MAX_SCORE,
+    REVIEW_MAX_LENGTH, COMMENT_MAX_LENGTH
 )
 
 
@@ -122,3 +123,67 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Review(models.Model):
+    title = models.ForeignKey(
+        Title,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name='Произведение'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name='Автор отзыва'
+    )
+    text = models.TextField(
+        'Текст отзыва',
+        max_length=REVIEW_MAX_LENGTH
+    )
+    score = models.PositiveSmallIntegerField(
+        'Оценка',
+        validators=[MinValueValidator(MIN_SCORE), MaxValueValidator(MAX_SCORE)]
+    )
+    pub_date = models.DateTimeField('Дата добавления', auto_now_add=True)
+
+    class Meta:
+        unique_together = ('title', 'author')
+        ordering = ('-pub_date',)
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+
+    def __str__(self):
+        return f'Отзыв {self.author} к {self.title}, оценка {self.score}'
+
+
+class Comment(models.Model):
+    review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Отзыв'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Автор комментария'
+    )
+    text = models.TextField(
+        'Текст комментария',
+        max_length=COMMENT_MAX_LENGTH
+    )
+    pub_date = models.DateTimeField(
+        'Дата публикации',
+        auto_now_add=True
+    )
+
+    class Meta:
+        ordering = ('pub_date',)
+        verbose_name = 'Комментарий к отзыву'
+        verbose_name_plural = 'Комментарии к отзывам'
+
+    def __str__(self):
+        return f'Комментарий {self.author} к {self.review}'
