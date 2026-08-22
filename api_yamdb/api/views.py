@@ -1,11 +1,12 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.db.models import Avg, Value, FloatField
-from django.db.models.functions import Coalesce, Round
+from django.db.models import Avg
+from django.db.models.functions import Round
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, viewsets, filters
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.filters import SearchFilter, DjangoFilterBackend
+from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
@@ -18,16 +19,15 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from .filters import TitleFilter
 from reviews.models import User, Category, Comment, Genre, Review, Title
-from .permissions import IsAdmin
+from .permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsAdminOrModeratorOrReadOnly
+)
 from .serializers import (
     SignUpSerializer, TokenSerializer, UserSerializer,
     ReviewSerializer, CommentSerializer,
     CategorySerializer, GenreSerializer,
     TitleReadSerializer, TitleWriteSerializer
 )
-
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
 
 
 @api_view(['POST'])
@@ -138,7 +138,7 @@ class NestedModelViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(NestedModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
+    permission_classes = (IsAdminOrModeratorOrReadOnly,)
 
     parent_model = Title
     parent_field = 'title'
@@ -148,7 +148,7 @@ class ReviewViewSet(NestedModelViewSet):
 class CommentViewSet(NestedModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
+    permission_classes = (IsAdminOrModeratorOrReadOnly,)
 
     parent_model = Review
     parent_field = 'review'
@@ -159,7 +159,7 @@ class BaseCategoryGenreViewSet(
     mixins.CreateModelMixin, mixins.ListModelMixin, mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
@@ -178,7 +178,7 @@ class GenreViewSet(BaseCategoryGenreViewSet):
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     http_method_names = ('get', 'post', 'patch', 'delete')
@@ -191,5 +191,5 @@ class TitleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Возвращает произведения с аннотированным рейтингом."""
         return Title.objects.annotate(
-            rating=Round(Coalesce(
-                Avg('reviews__score'), Value(0, output_field=FloatField())), 2))
+            rating=Round(Avg('reviews__score'))
+        )
