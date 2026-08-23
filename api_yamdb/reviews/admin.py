@@ -55,7 +55,7 @@ class ReviewAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'author', 'score',
                     'pub_date', 'short_text')
     search_fields = ('author__username', 'title__name', 'text')
-    list_filter = ('score','pub_date')
+    list_filter = ('score', 'pub_date')
     list_select_related = ('title', 'author')
     readonly_fields = ('pub_date',)
 
