@@ -10,6 +10,28 @@ from .constants import (
 )
 
 
+def get_current_year():
+    return timezone.now().year
+
+
+class AbstractGenreCategoryModel(models.Model):
+    name = models.CharField(
+        max_length=NAME_MAX_LENGTH, verbose_name='Название'
+    )
+    slug = models.SlugField(
+        max_length=SLUG_MAX_LENGTH,
+        verbose_name='Слаг',
+        unique=True
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractUser):
     class RoleChoices(models.TextChoices):
         USER = 'user', 'Пользователь'
@@ -50,55 +72,32 @@ class User(AbstractUser):
         return self.role == self.RoleChoices.MODERATOR
 
 
-class Genre(models.Model):
-    name = models.CharField(
-        max_length=NAME_MAX_LENGTH, verbose_name='Название'
-    )
-    slug = models.SlugField(
-        max_length=SLUG_MAX_LENGTH,
-        verbose_name='Слаг',
-        unique=True
-    )
+class Genre(AbstractGenreCategoryModel):
 
-    class Meta:
-        ordering = ('name',)
+    class Meta(AbstractGenreCategoryModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
-    def __str__(self):
-        return self.name
 
+class Category(AbstractGenreCategoryModel):
 
-class Category(models.Model):
-    name = models.CharField(
-        max_length=NAME_MAX_LENGTH, verbose_name='Название'
-    )
-    slug = models.SlugField(
-        max_length=SLUG_MAX_LENGTH,
-        verbose_name='Слаг',
-        unique=True
-    )
-
-    class Meta:
-        ordering = ('name',)
+    class Meta(AbstractGenreCategoryModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
-
-    def __str__(self):
-        return self.name
 
 
 class Title(models.Model):
     name = models.CharField(
         max_length=NAME_MAX_LENGTH, verbose_name='Название'
     )
-    year = models.PositiveSmallIntegerField(
+    year = models.SmallIntegerField(
         validators=[
             MaxValueValidator(
-                limit_value=timezone.now().year,
+                limit_value=get_current_year,
                 message='Год выпуска должен быть не больше текущего.'
             )
         ],
+        db_index=True, 
         verbose_name='Год выпуска'
     )
     description = models.TextField(blank=True, verbose_name='Описание')

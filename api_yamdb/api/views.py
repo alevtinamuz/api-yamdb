@@ -194,4 +194,4 @@ class TitleViewSet(viewsets.ModelViewSet):
         """Возвращает произведения с аннотированным рейтингом."""
         return Title.objects.annotate(
             rating=Round(Avg('reviews__score'))
-        )
+        ).order_by('name')
