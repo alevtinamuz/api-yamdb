@@ -111,9 +111,9 @@ class ReviewSerializer(NestedCreateMixin, serializers.ModelSerializer):
             'error_messages': {
                 'invalid': 'Оценка должна быть целым числом.',
                 'min_value': f'Оценка не может быть меньше {MIN_SCORE}.',
-                'max_value': f'Оценка не может быть больше {MAX_SCORE}.'}
+                'max_value': f'Оценка не может быть больше {MAX_SCORE}.'
             }
-        }
+        }}
 
     def validate(self, data):
         """Проверка, что пользователь ещё не оставлял отзыв
