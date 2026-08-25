@@ -10,6 +10,28 @@ from .constants import (
 )
 
 
+def get_current_year():
+    return timezone.now().year
+
+
+class AbstractGenreCategoryModel(models.Model):
+    name = models.CharField(
+        max_length=NAME_MAX_LENGTH, verbose_name='Название'
+    )
+    slug = models.SlugField(
+        max_length=SLUG_MAX_LENGTH,
+        verbose_name='Слаг',
+        unique=True
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractUser):
     class RoleChoices(models.TextChoices):
         USER = 'user', 'Пользователь'
@@ -50,55 +72,32 @@ class User(AbstractUser):
         return self.role == self.RoleChoices.MODERATOR
 
 
-class Genre(models.Model):
-    name = models.CharField(
-        max_length=NAME_MAX_LENGTH, verbose_name='Название'
-    )
-    slug = models.SlugField(
-        max_length=SLUG_MAX_LENGTH,
-        verbose_name='Слаг',
-        unique=True
-    )
+class Genre(AbstractGenreCategoryModel):
 
-    class Meta:
-        ordering = ('name',)
+    class Meta(AbstractGenreCategoryModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
-    def __str__(self):
-        return self.name
 
+class Category(AbstractGenreCategoryModel):
 
-class Category(models.Model):
-    name = models.CharField(
-        max_length=NAME_MAX_LENGTH, verbose_name='Название'
-    )
-    slug = models.SlugField(
-        max_length=SLUG_MAX_LENGTH,
-        verbose_name='Слаг',
-        unique=True
-    )
-
-    class Meta:
-        ordering = ('name',)
+    class Meta(AbstractGenreCategoryModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
-
-    def __str__(self):
-        return self.name
 
 
 class Title(models.Model):
     name = models.CharField(
         max_length=NAME_MAX_LENGTH, verbose_name='Название'
     )
-    year = models.PositiveSmallIntegerField(
+    year = models.SmallIntegerField(
         validators=[
             MaxValueValidator(
-                limit_value=timezone.now().year,
+                limit_value=get_current_year,
                 message='Год выпуска должен быть не больше текущего.'
             )
         ],
+        db_index=True,
         verbose_name='Год выпуска'
     )
     description = models.TextField(blank=True, verbose_name='Описание')
@@ -124,7 +123,18 @@ class Title(models.Model):
         return self.name
 
 
-class Review(models.Model):
+# Исхожу из того, что для полей author и text важно сохранение
+# индивидуальных verbose_name, которые не могут быть
+# преопределены без указания других характеристик. В этом случае при
+# наследовании author и text код короче не становится.
+class TimeStampModel(models.Model):
+    pub_date = models.DateTimeField('Дата добавления', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class Review(TimeStampModel):
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -145,7 +155,6 @@ class Review(models.Model):
         'Оценка',
         validators=[MinValueValidator(MIN_SCORE), MaxValueValidator(MAX_SCORE)]
     )
-    pub_date = models.DateTimeField('Дата добавления', auto_now_add=True)
 
     class Meta:
         unique_together = ('title', 'author')
@@ -157,7 +166,7 @@ class Review(models.Model):
         return f'Отзыв {self.author} к {self.title}, оценка {self.score}'
 
 
-class Comment(models.Model):
+class Comment(TimeStampModel):
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
@@ -173,10 +182,6 @@ class Comment(models.Model):
     text = models.TextField(
         'Текст комментария',
         max_length=COMMENT_MAX_LENGTH
-    )
-    pub_date = models.DateTimeField(
-        'Дата публикации',
-        auto_now_add=True
     )
 
     class Meta:
