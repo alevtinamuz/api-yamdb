@@ -11,10 +11,6 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework.status import (
-    HTTP_200_OK,
-    HTTP_400_BAD_REQUEST
-)
 from rest_framework_simplejwt.tokens import AccessToken
 
 from .filters import TitleFilter
@@ -26,7 +22,7 @@ from .serializers import (
     SignUpSerializer, TokenSerializer, UserSerializer,
     ReviewSerializer, CommentSerializer,
     CategorySerializer, GenreSerializer,
-    TitleReadSerializer, TitleWriteSerializer
+    TitleReadSerializer, TitleWriteSerializer, UsernameSerializer
 )
 
 
@@ -34,42 +30,36 @@ from .serializers import (
 @permission_classes([AllowAny])
 def sign_up(request):
     serializer = SignUpSerializer(data=request.data)
-    if serializer.is_valid():
-        username = serializer.validated_data['username']
-        email = serializer.validated_data['email']
-        user, _ = User.objects.get_or_create(
-            username=username,
-            email=email
-        )
-        confirmation_code = default_token_generator.make_token(user)
-        send_mail(
-            'YaMDb: Ваш код подтверждения',
-            f'Код: {confirmation_code}',
-            None,
-            [email]
-        )
-        return Response(serializer.data, status=HTTP_200_OK)
-    return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+    serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data['username']
+    email = serializer.validated_data['email']
+    user, _ = User.objects.get_or_create(
+        username=username,
+        email=email
+    )
+    confirmation_code = default_token_generator.make_token(user)
+    send_mail(
+        'YaMDb: Ваш код подтверждения',
+        f'Код: {confirmation_code}',
+        None,
+        [email]
+    )
+    return Response(serializer.data)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def get_token(request):
-    serializer = TokenSerializer(data=request.data)
-    if serializer.is_valid():
-        username = serializer.validated_data['username']
-        confirmation_code = serializer.validated_data['confirmation_code']
-        user = get_object_or_404(User, username=username)
-        if not default_token_generator.check_token(user, confirmation_code):
-            return Response({
-                'error': 'Неверный код подтверждения'
-            }, status=HTTP_400_BAD_REQUEST)
-        token = AccessToken.for_user(user)
-        return Response(
-            {'token': f'{token}'},
-            status=HTTP_200_OK
-        )
-    return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+    username_serializer = UsernameSerializer(data=request.data)
+    username_serializer.is_valid(raise_exception=True)
+    username = username_serializer.validated_data['username']
+    user = get_object_or_404(User, username=username)
+    serializer = TokenSerializer(data=request.data, context={'user': user})
+    serializer.is_valid(raise_exception=True)
+    token = AccessToken.for_user(user)
+    return Response(
+        {'token': f'{token}'}
+    )
 
 
 class UserViewSet(ModelViewSet):
@@ -89,16 +79,15 @@ class UserViewSet(ModelViewSet):
     def me(self, request):
         if request.method == 'GET':
             serializer = self.get_serializer(request.user)
-            return Response(serializer.data, status=HTTP_200_OK)
+            return Response(serializer.data)
         serializer = self.get_serializer(
             request.user,
             data=request.data,
             partial=True
         )
-        if serializer.is_valid():
-            serializer.save(role=request.user.role)
-            return Response(serializer.data, status=HTTP_200_OK)
-        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(role=request.user.role)
+        return Response(serializer.data)
 
 
 class NestedModelViewSet(viewsets.ModelViewSet):

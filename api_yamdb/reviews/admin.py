@@ -1,17 +1,19 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.db.models import Avg
+from django.db.models import Avg, Count
 
 from .models import User, Category, Genre, Title, Review, Comment
 
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):
+class UserAdmin(UserAdmin):
     list_display = (
         'username',
         'email',
         'role',
-        'is_staff'
+        'is_staff',
+        'count_reviews',
+        'count_comments'
     )
     list_editable = (
         'role',
@@ -23,6 +25,27 @@ class CustomUserAdmin(UserAdmin):
     list_filter = (
         'role',
     )
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            reviews_counted=Count('reviews', distinct=True),
+            comments_counted=Count('comments', distinct=True)
+        )
+
+    @admin.display(
+        description='Количество отзывов',
+        ordering='reviews_counted'
+    )
+    def count_reviews(self, obj):
+        return obj.reviews_counted
+
+    @admin.display(
+        description='Количество комментариев',
+        ordering='comments_counted'
+    )
+    def count_comments(self, obj):
+        return obj.comments_counted
 
 
 @admin.register(Category)
