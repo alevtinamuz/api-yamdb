@@ -8,6 +8,7 @@ from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import User, Category, Comment, Genre, Review, Title
 
 from .constants import ME_URL_PATH
+from reviews.constants import MIN_SCORE, MAX_SCORE
 
 
 class UserSerializer(serializers.ModelSerializer):
