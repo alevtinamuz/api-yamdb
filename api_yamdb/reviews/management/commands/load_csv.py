@@ -101,16 +101,16 @@ class Command(BaseCommand):
 
     def import_genre_title(self):
         rows = self._read_csv('genre_title.csv')
-        ThroughModel = Title.genre.through
+        through_model = Title.genre.through
         links = [
-            ThroughModel(
+            through_model(
                 id=row['id'],
                 title_id=row['title_id'],
                 genre_id=row['genre_id'],
             )
             for row in rows
         ]
-        ThroughModel.objects.bulk_create(links, ignore_conflicts=True)
+        through_model.objects.bulk_create(links, ignore_conflicts=True)
         self.stdout.write(
             self.style.SUCCESS(
                 f'Количество связей жанр-произведение импортировано: '
