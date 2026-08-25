@@ -1,12 +1,13 @@
 import re
 
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 
 from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import User, Category, Comment, Genre, Review, Title
 
-from reviews.constants import MIN_SCORE, MAX_SCORE
+from .constants import ME_URL_PATH
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -22,7 +23,7 @@ class UsernameSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=USERNAME_MAX_LENGTH)
 
     def validate_username(self, value):
-        if value == 'me':
+        if value == ME_URL_PATH:
             raise serializers.ValidationError(
                 'Использовать имя "me" в качестве username запрещено'
             )
@@ -56,6 +57,16 @@ class SignUpSerializer(UsernameSerializer):
 
 class TokenSerializer(UsernameSerializer):
     confirmation_code = serializers.CharField()
+
+    def validate(self, data):
+        user = self.context['user']
+        if not default_token_generator.check_token(
+            user, data['confirmation_code']
+        ):
+            raise serializers.ValidationError(
+                {'confirmation_code': 'Неверный код подтверждения.'}
+            )
+        return data
 
 
 class NestedCreateMixin:

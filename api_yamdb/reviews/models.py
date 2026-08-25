@@ -1,13 +1,15 @@
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import (
+    MinValueValidator, MaxValueValidator, RegexValidator
+)
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
 from .constants import (
-    ROLE_MAX_LENGTH, EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH, SLUG_MAX_LENGTH, MIN_SCORE, MAX_SCORE,
-    REVIEW_MAX_LENGTH, COMMENT_MAX_LENGTH
+    EMAIL_MAX_LENGTH, NAME_MAX_LENGTH, SLUG_MAX_LENGTH, MIN_SCORE,
+    MAX_SCORE, REVIEW_MAX_LENGTH, COMMENT_MAX_LENGTH, USERNAME_MAX_LENGTH
 )
+from .validators import validate_not_me
 
 
 def get_current_year():
@@ -39,7 +41,7 @@ class User(AbstractUser):
         MODERATOR = 'moderator', 'Модератор'
 
     role = models.CharField(
-        'Роль', max_length=ROLE_MAX_LENGTH,
+        'Роль', max_length=max(len(role) for role, _ in RoleChoices.choices),
         choices=RoleChoices.choices,
         default=RoleChoices.USER
     )
@@ -50,9 +52,19 @@ class User(AbstractUser):
         'Email', max_length=EMAIL_MAX_LENGTH,
         unique=True
     )
+    username = models.CharField(
+        'Имя пользователя', max_length=USERNAME_MAX_LENGTH,
+        unique=True, validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+\Z',
+                message='Username не соответствует шаблону'
+            ),
+            validate_not_me
+        ]
+    )
 
     class Meta:
-        ordering = ('id',)
+        ordering = ('username',)
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
