@@ -85,11 +85,6 @@ class NestedCreateMixin:
             raise serializers.ValidationError(
                 'Автором может быть только аутентифицированный пользователь')
 
-        if self.Meta.model == Review:
-            if Review.objects.filter(title=parent_obj, author=author).exists():
-                raise serializers.ValidationError(
-                    'Вы уже оставили отзыв на это произведение')
-
         validated_data.pop('author', None)
         validated_data.pop(self.parent_field, None)
 
@@ -109,6 +104,32 @@ class ReviewSerializer(NestedCreateMixin, serializers.ModelSerializer):
         model = Review
         fields = ('id', 'text', 'score', 'author', 'pub_date')
         read_only_fields = ('author', 'pub_date')
+        extra_kwargs = {'score': {
+            'min_value': MIN_SCORE,
+            'max_value': MAX_SCORE,
+            'error_messages': {
+                'invalid': 'Оценка должна быть целым числом.',
+                'min_value': f'Оценка не может быть меньше {MIN_SCORE}.',
+                'max_value': f'Оценка не может быть больше {MAX_SCORE}.'}
+            }
+        }
+
+    def validate(self, data):
+        """Проверка, что пользователь ещё не оставлял отзыв
+        на это произведение."""
+
+        request = self.context.get('request')
+        if request and request.method == 'POST':
+            title = self.context.get('title')
+            author = self.context.get('user')
+            if (
+                title
+                and author
+                and Review.objects.filter(title=title, author=author).exists()
+            ):
+                raise serializers.ValidationError(
+                    'Вы уже оставили отзыв на это произведение')
+        return data
 
 
 class CommentSerializer(NestedCreateMixin, serializers.ModelSerializer):

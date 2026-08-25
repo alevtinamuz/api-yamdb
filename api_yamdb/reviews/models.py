@@ -109,7 +109,7 @@ class Title(models.Model):
                 message='Год выпуска должен быть не больше текущего.'
             )
         ],
-        db_index=True, 
+        db_index=True,
         verbose_name='Год выпуска'
     )
     description = models.TextField(blank=True, verbose_name='Описание')
@@ -135,7 +135,18 @@ class Title(models.Model):
         return self.name
 
 
-class Review(models.Model):
+# Исхожу из того, что для полей author и text важно сохранение
+# индивидуальных verbose_name, которые не могут быть
+# преопределены без указания других характеристик. В этом случае при
+# наследовании author и text код короче не становится.
+class TimeStampModel(models.Model):
+    pub_date = models.DateTimeField('Дата добавления', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class Review(TimeStampModel):
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -156,7 +167,6 @@ class Review(models.Model):
         'Оценка',
         validators=[MinValueValidator(MIN_SCORE), MaxValueValidator(MAX_SCORE)]
     )
-    pub_date = models.DateTimeField('Дата добавления', auto_now_add=True)
 
     class Meta:
         unique_together = ('title', 'author')
@@ -168,7 +178,7 @@ class Review(models.Model):
         return f'Отзыв {self.author} к {self.title}, оценка {self.score}'
 
 
-class Comment(models.Model):
+class Comment(TimeStampModel):
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
@@ -184,10 +194,6 @@ class Comment(models.Model):
     text = models.TextField(
         'Текст комментария',
         max_length=COMMENT_MAX_LENGTH
-    )
-    pub_date = models.DateTimeField(
-        'Дата публикации',
-        auto_now_add=True
     )
 
     class Meta:
